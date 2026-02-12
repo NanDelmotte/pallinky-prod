@@ -1,4 +1,4 @@
-app = "tarti-flette"
+app = "pallinky-prod"
 primary_region = "fra"
 
 [build]
