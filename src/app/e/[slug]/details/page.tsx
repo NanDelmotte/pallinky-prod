@@ -22,11 +22,11 @@ function splitByStatus(rows: Row[]) {
 export default async function DetailsPage({ params }: { params: { slug: string } }) {
   const supabase = createSupabaseServer();
 
-  // 1. Fetch Event Details
+  // 1. Fetch Event Details (Using ilike for case-insensitive Tarti-flette safety)
   const { data: e } = await supabase
     .from("events")
     .select("*")
-    .eq("slug", params.slug)
+    .ilike("slug", params.slug)
     .single();
 
   if (!e) {
@@ -107,7 +107,12 @@ export default async function DetailsPage({ params }: { params: { slug: string }
 
         <section className="c-section">
           <div className="c-actions">
-            <a className="c-btnSecondary" href={`/e/${params.slug}/calendar.ics`}>Save to calendar</a>
+            {/* FIX: Remove calendar button if date/time is missing */}
+            {e.starts_at && (
+              <a className="c-btnSecondary" href={`/e/${params.slug}/calendar.ics`}>
+                Save to calendar
+              </a>
+            )}
             <Link className="c-btnSecondary" href={`/e/${params.slug}`}>Change RSVP</Link>
             <Link className="c-btnSecondary" href="/create">Create your own event</Link>
           </div>

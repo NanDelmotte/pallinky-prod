@@ -1,4 +1,7 @@
 // src/app/m/[token]/guests/page.tsx
+
+
+
 import Shell from "@/components/Shell";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { formatEU } from "@/lib/time";

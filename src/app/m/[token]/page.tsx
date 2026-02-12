@@ -51,17 +51,21 @@ export default async function ManageHome({
     e.slug
   )}&mt=${encodeURIComponent(params.token)}`;
 
+  // Amsterdam Standard logic for missing dates
+  const displayTime = e.starts_at ? formatEU(e.starts_at) : "Time not set";
+  const shellSubtitle = e.starts_at ? `${e.title} · ${displayTime}` : e.title;
+
   return (
     <Shell
       title="You’re hosting"
-      subtitle={`${e.title} · ${formatEU(e.starts_at)}`}
+      subtitle={shellSubtitle}
       paletteKey={paletteKey}
     >
       <div className="c-stack">
         {/* Section 1 — Event status (informational) */}
         <section className="c-section">
           <div style={{ fontWeight: 700, fontSize: 18 }}>{e.title}</div>
-          <div className="c-help">{formatEU(e.starts_at)}</div>
+          <div className="c-help">{displayTime}</div>
 
           <div
             style={{
@@ -96,12 +100,15 @@ export default async function ManageHome({
               Share invite again
             </Link>
 
-            <a
-              href={`/m/${params.token}/calendar.ics`}
-              className="c-btnSecondary"
-            >
-              Add to my calendar
-            </a>
+            {/* FIX: Only show button if a date/time exists */}
+            {e.starts_at && (
+              <a
+                href={`/m/${params.token}/calendar.ics`}
+                className="c-btnSecondary"
+              >
+                Add to my calendar
+              </a>
+            )}
           </div>
         </section>
 

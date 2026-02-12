@@ -1,0 +1,45 @@
+# PROJECT MANIFESTO: PALLINKY (V4.0)
+# Path: project documents/manifesto.md
+# Status: Phase 3 - Production Stable & Automated CI/CD
+
+Developer Profile: Solo, Non-Developer (High Automation, Low Maintenance)
+
+## 0. WORKING RULES
+1. **File Headers:** Mandatory file path comment at the top of every code block.
+2. **Replacement Policy:**
+   * **< 3 lines:** Use `// Old... // New...` format.
+   * **> 3 lines:** Request the current code first, then provide a **full fresh page**.
+3. **Tone:** Brief, professional, direct. No coaching. No pedagogical explanations.
+4. **Diagnostics First:** Ask clarifying questions or request `fly logs` / `Supabase SQL` lookups before proposing code changes.
+5. **No Guessing:** If the root cause is unclear, provide commands to extract diagnostics.
+6. **One Step at a Time:** Address one issue per response unless explicitly asked for a batch fix.
+
+## 1. TECH STACK & CONSTRAINTS
+* **Framework:** Next.js (App Router) in `src/app`.
+* **Hosting:** Fly.io (`pallinky-prod`).
+* **Database:** Supabase (Schema: `public`).
+* **CI/CD:** GitHub Actions (Auto-deploy on `git push origin main`).
+* **Email:** Resend (Domain: `pallinky.com`).
+* **Worker:** `notifications_outbox` processed by `cron-job.org` hitting `/api/worker/outbox`.
+* **Environment Branding:**
+    * **Production:** Pallinky (`pallinky.com`)
+    * **Local/Dev:** Tarti-flette (`localhost:3000`)
+
+## 2. KEY ROUTES
+* `/e/[slug]` — Guest RSVP & Event Details.
+* `/m/[token]` — Host Management (Uses `manage_handle`).
+* `/create/details` — 5-step event creation engine.
+* `/api/worker/outbox` — Secured POST route for email processing.
+
+## 3. DATABASE & LOGIC
+* **Creation:** `create_event_draft` (RPC). Generates `manage_handle` (MD5), auto-inserts Host RSVP, enqueues `host_manage_link`.
+* **RSVP Logic:** `submit_rsvp` (RPC). Handles upserts. Constraint `rsvps_event_id_email_lc_key` ensures 1 RSVP per email/event.
+* **Worker Security:** Requires `Authorization: Bearer` or `x-cron-secret` matching `CRON_SECRET` env var.
+* **Concurrency:** Worker uses `FOR UPDATE SKIP LOCKED` via RPC `get_pending_outbox` to prevent duplicate sends.
+* **Communications:** * `send_host_message_by_manage_token`: Bulk enqueue messages.
+    * `cancel_event_by_manage_token`: Status update + outbox enqueue.
+
+## 4. BRANDING & TIME
+* **App Name:** Dynamic based on `NODE_ENV`.
+* **Base URL:** Automatically adjusts between `localhost:3000` and `pallinky.com` for metadata and email links.
+* **Timezone:** Calendar `.ics` generation assumes Amsterdam local -> UTC conversion.
