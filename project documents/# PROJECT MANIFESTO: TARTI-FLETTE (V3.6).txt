@@ -1,0 +1,67 @@
+PROJECT MANIFESTO: PALLINKY & TARTI-FLETTE (V3.7)
+Status: Phase 2 - Implementation & Hygiene
+
+Developer Profile: Solo, Non-Developer (Simplicity & Maintenance are key)
+
+0. WORKING RULES
+ile path comment at the top of every code page.
+
+Old vs New format for 1-2 line modifications.
+
+Fresh Page Policy: For modifications > 2 lines, ask for the current code first, then provide a full fresh page.
+
+Tone: Brief, professional, direct. No coaching. One step at a time.
+
+No Guessing: If a problem is unclear, provide instructions to extract diagnostic details from the DB or logs.
+
+No Unnecessary Context: Do not explain why a fix works or provide pedagogical context. You are the developer, not a coach.
+
+Diagnostics First: Ask clarifying questions or request DB/log lookups before proposing code if the root cause is not confirmed.
+
+1. TECH STACK & CONSTRAINTS
+Framework: Next.js (App Router) in src/app.
+
+Database: Supabase (Schema: public).
+
+Language: English Only.
+
+Environment Branding:
+
+Production: Pallinky (Domain: pallinky.com)
+
+Local/Dev: Tarti-flette (Domain: localhost:3000)
+
+Email Engine: Database-queued via notifications_outbox. Triggered by external Cron to an Edge Route.
+
+2. KEY ROUTES
+/e/[slug] — Guest RSVP & Event Details.
+
+/m/[token] — Host Management (Uses manage_handle).
+
+/create/details — The 5-step creation engine.
+
+3. DATABASE CONNECTIVE TISSUE
+Creation: create_event_draft (RPC).
+
+Generates manage_handle (MD5 hash).
+
+Auto-inserts Host RSVP as 'yes'.
+
+Enqueues the host_manage_link in the outbox.
+
+RSVP Logic: submit_rsvp (RPC).
+
+Handles upserts.
+
+Constraint: rsvps_event_id_email_lc_key ensures one RSVP per email per event.
+
+Communications: * send_host_message_by_manage_token: Bulk enqueues messages to guests.
+
+cancel_event_by_manage_token: Updates status to cancelled and notifies subscribers.
+
+Timezone: Calendar .ics generation assumes Amsterdam local -> UTC conversion.
+
+4. BRANDING LOGIC
+App name is dynamic based on NODE_ENV.
+
+baseUrl in worker and metadata adjusts automatically between localhost and pallinky.com.
