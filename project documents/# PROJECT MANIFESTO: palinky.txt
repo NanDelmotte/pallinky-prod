@@ -38,6 +38,13 @@ Developer Profile: Solo, Non-Developer (High Automation, Low Maintenance)
 * **Concurrency:** Worker uses `FOR UPDATE SKIP LOCKED` via RPC `get_pending_outbox` to prevent duplicate sends.
 * **Communications:** * `send_host_message_by_manage_token`: Bulk enqueue messages.
     * `cancel_event_by_manage_token`: Status update + outbox enqueue.
+    NFRASTRUCTURE REQUIREMENT: STORAGE
+
+Bucket Name: covers
+
+Privacy: Public
+
+Constraint: If images fail to upload/render in prod, verify the storage.objects policies match the SQL above.
 
 ## 4. BRANDING & TIME
 * **App Name:** Dynamic based on `NODE_ENV`.
