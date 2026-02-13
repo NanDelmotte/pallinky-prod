@@ -7,13 +7,11 @@ primary_region = "ams" # Amsterdam Standard
   [build.args]
     # Public vars (Baked into the JS bundle)
     NEXT_PUBLIC_SUPABASE_URL="https://nfoshumnlfsjtfxkyqrq.supabase.co"
-    NEXT_PUBLIC_SUPABASE_ANON_KEY="sb_publishable_tV5Yx4MiEokwXvjW15geJQ_9qcV_RI_"
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=""
     
     # Private vars (Needed to satisfy 'npm run build' validation)
     # We use 'required_at_runtime' as a placeholder so the build doesn't crash
-    SUPABASE_SERVICE_ROLE_KEY="sb_secret_Y5ljhXrsYRKAeM7rUTxTpA_y3JnE5fM"
-    RESEND_API_KEY="rre_Q1tB6D6A_B2Epdg4wSzRvs8Pc2P3NMH7m"
-    CRON_SECRET="cirklie-cron-secret-9f3k2m8x7q4w5e6r"
+  
 
 [env]
   # Runtime public variables
