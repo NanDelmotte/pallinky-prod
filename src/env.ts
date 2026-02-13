@@ -1,10 +1,6 @@
 // src/env.ts
 const requiredEnvVars = [
-  "NEXT_PUBLIC_SUPABASE_URL",
-  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-  "SUPABASE_SERVICE_ROLE_KEY",
-  "RESEND_API_KEY",
-  "CRON_SECRET",
+
 ] as const;
 
 export function validateEnv() {
