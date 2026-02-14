@@ -1,6 +1,7 @@
+/* src/app/create/preview/page.tsx */
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
 import Shell from "@/components/Shell";
 import { formatFriendlyDateAtTime } from "@/lib/time";
@@ -19,7 +20,6 @@ type EventSummary = {
   status?: "active" | "cancelled" | string;
 };
 
-// Returns a plain object of CSS variables based on palette key
 function getPaletteVariables(key?: string | null): Record<string, string> {
   const k = (key || "").trim().toLowerCase();
   const palettes: Record<string, any> = {
@@ -32,18 +32,22 @@ function getPaletteVariables(key?: string | null): Record<string, string> {
   return palettes[k] || palettes.zen;
 }
 
-export default function PreviewClient({
-  slug,
-  mt,
-  event,
-}: {
-  slug: string;
-  mt: string;
-  event: EventSummary;
-}) {
+export default function PreviewPage({ searchParams }: { searchParams: any }) {
   const router = useRouter();
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [qrOpen, setQrOpen] = useState(false);
+
+  // Extract values from searchParams to satisfy the build
+  const slug = searchParams?.slug || "";
+  const mt = searchParams?.mt || "";
+  const event: EventSummary = {
+    host_name: searchParams?.host_name || "",
+    title: searchParams?.title || "",
+    description: searchParams?.description || null,
+    starts_at: searchParams?.starts_at || null,
+    location: searchParams?.location || null,
+    gif_key: searchParams?.gif_key || "zen",
+  };
 
   const shareUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
@@ -83,7 +87,6 @@ export default function PreviewClient({
   return (
     <Shell title="Ready to share" paletteKey={null}>
       <div className="c-stack">
-        {/* Themed Preview Area */}
         <div 
           className="c-card" 
           style={{ 
@@ -105,7 +108,6 @@ export default function PreviewClient({
           </div>
         </div>
 
-        {/* Primary Actions */}
         <div className="c-stack" style={{ gap: "var(--space-2)" }}>
           <button className="c-btnPrimary" onClick={handleShare}>
             Share with guests
@@ -116,14 +118,13 @@ export default function PreviewClient({
           </a>
         </div>
 
-        {/* Utilities */}
         <div className="c-divider" />
         
         <details className="c-section" onToggle={(e) => setQrOpen((e.currentTarget as any).open)}>
           <summary className="c-btnGhost" style={{ textAlign: 'center' }}>Show QR code</summary>
           {qrDataUrl && (
             <div style={{ display: "flex", justifyContent: "center", paddingTop: "var(--space-3)" }}>
-              <img src={qrDataUrl} alt="QR" className="c-card" style={{ width: 180, padding: 10 }} />
+              <img src={qrDataUrl} alt="QR" className="c-card" style={{ width: 180, padding: 10, background: "white" }} />
             </div>
           )}
         </details>

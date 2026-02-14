@@ -1,3 +1,4 @@
+/* src/app/create/details/components/Step4Create.tsx */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -6,13 +7,11 @@ import { BottomNav } from "./BottomNav";
 import { subscribeToPush } from "@/lib/notifications";
 
 export function Step4Create({ draft, action, backHref, hiddenInputs }: { draft: any; action: any; backHref: string; hiddenInputs: any }) {
-  // 1. Initialize state from draft OR localStorage
   const [name, setName] = useState(draft.host_name || "");
   const [email, setEmail] = useState(draft.host_email || "");
   const [isPushEnabled, setIsPushEnabled] = useState(false);
   const [pushSubscription, setPushSubscription] = useState<any>(null);
 
-  // 2. Load saved data on mount
   useEffect(() => {
     const savedName = localStorage.getItem("tp_name");
     const savedEmail = localStorage.getItem("tp_email");
@@ -20,7 +19,6 @@ export function Step4Create({ draft, action, backHref, hiddenInputs }: { draft: 
     if (!email && savedEmail) setEmail(savedEmail);
   }, []);
 
-  // 3. Save data as it changes
   useEffect(() => {
     localStorage.setItem("tp_name", name);
     localStorage.setItem("tp_email", email);
@@ -29,6 +27,17 @@ export function Step4Create({ draft, action, backHref, hiddenInputs }: { draft: 
   const handlePushToggle = async () => {
     try {
       if (!isPushEnabled) {
+        if (!('serviceWorker' in navigator)) {
+          alert("Debug: Browser does not support Service Workers.");
+          return;
+        }
+
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (!registration) {
+          alert("Debug: No Service Worker found. Open this from your Home Screen!");
+          return;
+        }
+
         const sub = await subscribeToPush(email);
         setPushSubscription(sub);
         setIsPushEnabled(true);
@@ -36,9 +45,9 @@ export function Step4Create({ draft, action, backHref, hiddenInputs }: { draft: 
         setIsPushEnabled(false);
         setPushSubscription(null);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Error: Make sure you've added the app to your Home Screen!");
+      alert(`Debug Error: ${err.message || "Unknown error"}`);
     }
   };
 
@@ -92,7 +101,6 @@ export function Step4Create({ draft, action, backHref, hiddenInputs }: { draft: 
 
       <div style={{ flex: 1 }} />
 
-      {/* 4. Development Refresh Button */}
       <button 
         type="button" 
         onClick={() => window.location.reload()}
@@ -103,7 +111,7 @@ export function Step4Create({ draft, action, backHref, hiddenInputs }: { draft: 
 
       <BottomNav
         left={<ArrowNav dir="left" kind="link" href={backHref} ariaLabel="Back" />}
-        right={<ArrowNav dir="right" kind="submit" ariaLabel="Create invite" />}
+        right={<ArrowNav dir="right" kind="submit" ariaLabel="Create invite" disableWhenInvalid={false} />}
       />
     </form>
   );

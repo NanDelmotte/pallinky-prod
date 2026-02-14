@@ -1,3 +1,4 @@
+/* src/app/create/preview/page.tsx */
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -31,20 +32,22 @@ function getPaletteVariables(key?: string | null): Record<string, string> {
   return palettes[k] || palettes.zen;
 }
 
-export default function PreviewClient({
-  slug,
-  mt,
-  event,
-  markSharedAction,
-}: {
-  slug: string;
-  mt: string;
-  event: EventSummary;
-  markSharedAction: (formData: FormData) => Promise<void>;
-}) {
+export default function PreviewPage({ searchParams }: { searchParams: any }) {
   const router = useRouter();
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [qrOpen, setQrOpen] = useState(false);
+
+  // Extract values from searchParams to satisfy the build
+  const slug = searchParams?.slug || "";
+  const mt = searchParams?.mt || "";
+  const event: EventSummary = {
+    host_name: searchParams?.host_name || "",
+    title: searchParams?.title || "",
+    description: searchParams?.description || null,
+    starts_at: searchParams?.starts_at || null,
+    location: searchParams?.location || null,
+    gif_key: searchParams?.gif_key || "zen",
+  };
 
   const shareUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
@@ -71,24 +74,12 @@ export default function PreviewClient({
     try {
       if (navigator.share) {
         await navigator.share({ text: shareText });
-        
-        // Mark as shared in Supabase before redirecting
-        const formData = new FormData();
-        await markSharedAction(formData);
-        
         router.push(`/m/${mt}`);
       } else {
         await navigator.clipboard.writeText(shareText);
         alert("Invite link copied!");
-        
-        const formData = new FormData();
-        await markSharedAction(formData);
-        
-        router.push(`/m/${mt}`);
       }
-    } catch (e) {
-      console.error("Share failed", e);
-    }
+    } catch (e) { /* ignore cancel */ }
   }
 
   const paletteStyles = useMemo(() => getPaletteVariables(event.gif_key), [event.gif_key]);

@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'Pallinky',
     short_name: 'Pal Linky',
     description: 'Effortless Minimal RSVP App',
-    start_url: '/',
+    start_url: '/?standalone=true',
     scope: '/',
     id: 'pallinky-pwa',
     display: 'standalone',
