@@ -354,16 +354,22 @@
       ],
       "functions": [
         {
-          "args": "",
-          "name": "handle_new_rsvp_notification",
-          "returns": "trigger",
-          "definition": "CREATE OR REPLACE FUNCTION public.handle_new_rsvp_notification()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nBEGIN\n    IF (NEW.guest_token NOT LIKE 'HOST-%') THEN\n        INSERT INTO public.notifications_outbox (event_id, recipient_email, template, payload)\n        SELECT \n            e.id, \n            e.host_email, \n            'host_rsvp_notification', \n            jsonb_build_object(\n                'event_title', e.title,\n                'guest_name', NEW.name,\n                'response', NEW.status,\n                'manage_url', 'https://pallinky.com/m/' || e.manage_handle\n            )\n        FROM public.events e\n        WHERE e.id = NEW.event_id;\n    END IF;\n    RETURN NEW;\nEND;\n$function$\n"
+          "args": "p_limit integer",
+          "name": "get_pending_outbox",
+          "returns": "SETOF notifications_outbox",
+          "definition": "CREATE OR REPLACE FUNCTION public.get_pending_outbox(p_limit integer)\n RETURNS SETOF notifications_outbox\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nBEGIN\n    RETURN QUERY\n    SELECT *\n    FROM public.notifications_outbox\n    WHERE status = 'pending'\n    ORDER BY created_at ASC\n    LIMIT p_limit\n    FOR UPDATE SKIP LOCKED;\nEND;\n$function$\n"
         },
         {
           "args": "p_id uuid",
           "name": "mark_outbox_sent",
           "returns": "void",
-          "definition": "CREATE OR REPLACE FUNCTION public.mark_outbox_sent(p_id uuid)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nBEGIN\n  UPDATE public.notifications_outbox\n  SET status = 'sent'\n  WHERE id = p_id;\nEND;\n$function$\n"
+          "definition": "CREATE OR REPLACE FUNCTION public.mark_outbox_sent(p_id uuid)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nBEGIN\n    UPDATE public.notifications_outbox\n    SET status = 'sent',\n        attempts = attempts + 1\n    WHERE id = p_id;\nEND;\n$function$\n"
+        },
+        {
+          "args": "",
+          "name": "handle_new_rsvp_notification",
+          "returns": "trigger",
+          "definition": "CREATE OR REPLACE FUNCTION public.handle_new_rsvp_notification()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nBEGIN\n    IF (NEW.guest_token NOT LIKE 'HOST-%') THEN\n        INSERT INTO public.notifications_outbox (event_id, recipient_email, template, payload)\n        SELECT \n            e.id, \n            e.host_email, \n            'host_rsvp_notification', \n            jsonb_build_object(\n                'event_title', e.title,\n                'guest_name', NEW.name,\n                'response', NEW.status,\n                'manage_url', 'https://pallinky.com/m/' || e.manage_handle\n            )\n        FROM public.events e\n        WHERE e.id = NEW.event_id;\n    END IF;\n    RETURN NEW;\nEND;\n$function$\n"
         },
         {
           "args": "p_manage_token text, p_subject text, p_body text",
@@ -402,25 +408,19 @@
           "definition": "CREATE OR REPLACE FUNCTION public.get_event_by_manage_token(p_manage_token text)\n RETURNS SETOF events\n LANGUAGE sql\n SECURITY DEFINER\nAS $function$\n  SELECT * FROM public.events\n  WHERE manage_handle = p_manage_token\n     OR manage_token_hash = encode(digest(p_manage_token, 'sha256'), 'hex')\n  LIMIT 1;\n$function$\n"
         },
         {
-          "args": "p_limit integer",
-          "name": "get_pending_outbox",
-          "returns": "TABLE(out_id uuid, out_event_id uuid, out_recipient_email text, out_template text, out_payload jsonb, out_attempts integer)",
-          "definition": "CREATE OR REPLACE FUNCTION public.get_pending_outbox(p_limit integer)\n RETURNS TABLE(out_id uuid, out_event_id uuid, out_recipient_email text, out_template text, out_payload jsonb, out_attempts integer)\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nBEGIN\n  RETURN QUERY\n  UPDATE public.notifications_outbox AS n\n  SET status = 'pending',\n      attempts = n.attempts + 1\n  WHERE n.id IN (\n    SELECT sub.id\n    FROM public.notifications_outbox sub\n    WHERE (sub.status IS NULL OR sub.status = 'failed')\n      AND sub.attempts < 5\n    ORDER BY sub.created_at ASC\n    LIMIT p_limit\n    FOR UPDATE SKIP LOCKED\n  )\n  RETURNING \n    n.id, \n    n.event_id, \n    n.recipient_email, \n    n.template, \n    n.payload, \n    n.attempts;\nEND;\n$function$\n"
+          "args": "p_manage_token text, p_title text, p_starts_at timestamp with time zone, p_ends_at timestamp with time zone, p_location text, p_description text, p_cover_image_url text, p_expires_at timestamp with time zone, p_gif_key text",
+          "name": "update_event_by_manage_token",
+          "returns": "void",
+          "definition": "CREATE OR REPLACE FUNCTION public.update_event_by_manage_token(p_manage_token text, p_title text, p_starts_at timestamp with time zone, p_ends_at timestamp with time zone, p_location text, p_description text, p_cover_image_url text, p_expires_at timestamp with time zone, p_gif_key text)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nbegin\n  update public.events\n  set\n    title = p_title,\n    starts_at = p_starts_at,\n    ends_at = p_ends_at,\n    location = p_location,\n    description = p_description,\n    cover_image_url = p_cover_image_url,\n    expires_at = p_expires_at,\n    gif_key = p_gif_key,\n    updated_at = now()\n  where manage_handle = p_manage_token;\nend;\n$function$\n"
         },
         {
           "args": "p_slug text, p_name text, p_status text, p_guest_token text, p_email text, p_message text",
           "name": "submit_rsvp",
           "returns": "json",
-          "definition": "CREATE OR REPLACE FUNCTION public.submit_rsvp(p_slug text, p_name text, p_status text, p_guest_token text DEFAULT NULL::text, p_email text DEFAULT NULL::text, p_message text DEFAULT NULL::text)\n RETURNS json\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nDECLARE\n  v_event_id UUID;\n  v_result JSON;\nBEGIN\n  SELECT id INTO v_event_id FROM public.events WHERE slug = p_slug;\n  \n  IF v_event_id IS NULL THEN\n    RETURN json_build_object('error', 'Event not found');\n  END IF;\n\n  -- Insert or Update based ONLY on the email/event combo\n  INSERT INTO public.rsvps (\n    event_id, name, status, guest_token, email, message\n  )\n  VALUES (\n    v_event_id, p_name, p_status, \n    COALESCE(p_guest_token, encode(gen_random_bytes(16), 'hex')), \n    p_email, p_message\n  )\n  ON CONFLICT ON CONSTRAINT rsvps_event_id_email_lc_key\n  DO UPDATE SET \n    name = EXCLUDED.name, \n    status = EXCLUDED.status,\n    message = EXCLUDED.message,\n    -- We update the token to whichever one was used most recently (Host or Cookie)\n    guest_token = EXCLUDED.guest_token \n  RETURNING json_build_object('success', true, 'guest_token', rsvps.guest_token) \n  INTO v_result;\n\n  RETURN v_result;\nEND;\n$function$\n"
-        },
-        {
-          "args": "p_manage_token text, p_title text, p_starts_at timestamp with time zone, p_ends_at timestamp with time zone, p_location text, p_description text, p_cover_image_url text, p_expires_at timestamp with time zone, p_gif_key text",
-          "name": "update_event_by_manage_token",
-          "returns": "void",
-          "definition": "CREATE OR REPLACE FUNCTION public.update_event_by_manage_token(p_manage_token text, p_title text, p_starts_at timestamp with time zone, p_ends_at timestamp with time zone, p_location text, p_description text, p_cover_image_url text, p_expires_at timestamp with time zone, p_gif_key text)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nbegin\n  update public.events\n  set\n    title = p_title,\n    starts_at = p_starts_at,\n    ends_at = p_ends_at,\n    location = p_location,\n    description = p_description,\n    cover_image_url = p_cover_image_url,\n    expires_at = p_expires_at,\n    gif_key = p_gif_key,\n    updated_at = now()\n  where manage_handle = p_manage_token;\nend;\n$function$\n"
+          "definition": "CREATE OR REPLACE FUNCTION public.submit_rsvp(p_slug text, p_name text, p_status text, p_guest_token text DEFAULT NULL::text, p_email text DEFAULT NULL::text, p_message text DEFAULT NULL::text)\n RETURNS json\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nDECLARE\n  v_event_id UUID;\n  v_result JSON;\n  v_existing_token TEXT;\n  v_existing_status TEXT;\nBEGIN\n  -- 1. Get Event ID\n  SELECT id INTO v_event_id FROM public.events WHERE slug = p_slug;\n  \n  IF v_event_id IS NULL THEN\n    RETURN json_build_object('error', 'Event not found');\n  END IF;\n\n  -- 2. Check for an existing RSVP to prevent redundant updates (Idempotency)\n  -- This prevents \"double-tap\" logic from re-running the heavy write if nothing changed\n  SELECT guest_token, status INTO v_existing_token, v_existing_status\n  FROM public.rsvps \n  WHERE event_id = v_event_id \n    AND (email_lc = LOWER(p_email) OR guest_token = p_guest_token);\n\n  IF v_existing_token IS NOT NULL AND v_existing_status = p_status AND v_existing_token = p_guest_token THEN\n      RETURN json_build_object('success', true, 'guest_token', v_existing_token, 'note', 'idempotent');\n  END IF;\n\n  -- 3. Insert or Update\n  INSERT INTO public.rsvps (\n    event_id, name, status, guest_token, email, message\n  )\n  VALUES (\n    v_event_id, p_name, p_status, \n    COALESCE(p_guest_token, encode(gen_random_bytes(16), 'hex')), \n    p_email, p_message\n  )\n  ON CONFLICT ON CONSTRAINT rsvps_event_id_email_lc_key\n  DO UPDATE SET \n    name = EXCLUDED.name, \n    status = EXCLUDED.status,\n    message = EXCLUDED.message,\n    guest_token = EXCLUDED.guest_token,\n    updated_at = now() -- Track when they last changed their mind\n  RETURNING json_build_object('success', true, 'guest_token', rsvps.guest_token) \n  INTO v_result;\n\n  RETURN v_result;\nEND;\n$function$\n"
         }
       ],
-      "timestamp": "2026-02-12T13:02:49.282145+00:00"
+      "timestamp": "2026-02-14T09:55:54.558318+00:00"
     }
   }
 ]

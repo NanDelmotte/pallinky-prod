@@ -1,3 +1,7 @@
+# On Mac/Linux
+find . -maxdepth 4 -not -path '*/.*' -not -path '*/node_modules*'
+
+
 SELECT jsonb_build_object(
   'timestamp', now(),
   'tables', (

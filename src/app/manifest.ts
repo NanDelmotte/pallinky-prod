@@ -6,11 +6,12 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: 'Pal Linky',
     description: 'Effortless Minimal RSVP App',
     start_url: '/',
-    id: 'pallinky-pwa', // Unique ID for the app instance
+    scope: '/',
+    id: 'pallinky-pwa',
     display: 'standalone',
-    orientation: 'portrait', // Locks orientation for a native app feel
-    background_color: '#f8e9dc', // Using your beige background for the splash
-    theme_color: '#43691b',      // Using your dark green for the UI chrome
+    orientation: 'portrait',
+    background_color: '#f8e9dc',
+    theme_color: '#43691b',
     icons: [
       {
         src: '/apple-icon.png',
@@ -22,7 +23,7 @@ export default function manifest(): MetadataRoute.Manifest {
         src: '/icon-512.png',
         sizes: '512x512',
         type: 'image/png',
-        purpose: 'maskable', // Essential for Android "Adaptive Icons"
+        purpose: 'maskable',
       },
     ],
   }

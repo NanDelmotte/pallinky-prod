@@ -1,4 +1,4 @@
-# PROJECT MANIFESTO: PALLINKY (V4.0)
+# PROJECT MANIFESTO: PALLINKY (V4.01
 # Path: project documents/manifesto.md
 # Status: Phase 3 - Production Stable & Automated CI/CD
 
@@ -9,7 +9,71 @@ Developer Profile: Solo, Non-Developer (High Automation, Low Maintenance)
 2. **Replacement Policy:**
    * **< 3 lines:** Use `// Old... // New...` format.
    * **> 3 lines:** Request the current code first, then provide a **full fresh page**.
-3. **Tone:** Brief, professional, direct. No coaching. No pedagogical explanations.
+3. **Tone:** Brief, professional, direStatus: Phase 3.5 - UI Polish & PWA Infrastructure
+Developer Profile: Solo, Non-Developer (High Automation, Low Maintenance)
+
+0. WORKING RULES
+File Headers: Mandatory file path comment at the top of every code block.
+
+Replacement Policy:
+
+< 3 lines: Use // Old... // New... format.
+
+> 3 lines: Request the current code first, then provide a full fresh page.
+
+Tone: Brief, professional, direct. No coaching or pedagogical explanations.
+
+DIAGNOSTICS FIRST: Zero tolerance for guessing. Request fly logs, Supabase SQL lookups, or browser console outputs before proposing code. If the root cause is unclear, provide commands to extract diagnostics.
+
+One Step at a Time: Address one issue per response unless explicitly asked for a batch fix.
+
+1. TECH STACK & CONSTRAINTS
+Framework: Next.js (App Router) in src/app.
+
+Hosting: Fly.io (pallinky-prod).
+
+Database: Supabase (Schema: public).
+
+CI/CD: GitHub Actions (Auto-deploy on git push origin main).
+
+Email: Resend (Domain: pallinky.com).
+
+Worker: notifications_outbox processed by cron-job.org hitting /api/worker/outbox.
+
+Environment Branding:
+
+Production: Pallinky (pallinky.com)
+
+Local/Dev: Tarti-flette (localhost:3000)
+
+2. KEY ROUTES & ENGINES
+/e/[slug] — Guest RSVP & Event Details.
+
+/m/[token] — Host Management (Uses manage_handle).
+
+/create/details — 5-step event creation engine (URL-parameter state).
+
+/api/worker/outbox — Secured POST route for email processing.
+
+3. DATABASE & LOGIC
+Creation: create_event_draft (RPC). Generates manage_handle (MD5), auto-inserts Host RSVP, enqueues host_manage_link.
+
+RSVP Logic: submit_rsvp (RPC). Constraint rsvps_event_id_email_lc_key ensures 1 RSVP per email/event. WARNING: email_lc is a generated column; never include it in INSERT/UPDATE.
+
+Worker Security: Requires CRON_SECRET env var validation.
+
+Concurrency: Worker uses FOR UPDATE SKIP LOCKED via RPC get_pending_outbox.
+
+Storage: Bucket covers (Public). Verify storage.objects policies if uploads fail.
+
+4. BRANDING, TIME & PWA
+App Name: Dynamic based on NODE_ENV.
+
+Timezone: "Amsterdam Standard" (Amsterdam Local <-> UTC).
+
+PWA Status: Icons/Manifest are functional. Web Push infrastructure exists in the file tree (sw.js) but is NOT active (no DB tables yet).
+
+Current UI Friction: BottomNav buttons currently clash with native iOS gesture bars (Home Bar) on iPhone.ct. No coaching. No pedagogical explanations.
 4. **Diagnostics First:** Ask clarifying questions or request `fly logs` / `Supabase SQL` lookups before proposing code changes.
 5. **No Guessing:** If the root cause is unclear, provide commands to extract diagnostics.
 6. **One Step at a Time:** Address one issue per response unless explicitly asked for a batch fix.
