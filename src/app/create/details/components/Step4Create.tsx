@@ -1,4 +1,4 @@
-/* src/app/create/details/components/Step4Create.tsx */
+// src/app/create/details/components/Step4Create.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -14,30 +14,22 @@ export function Step4Create({ draft, action, backHref, hiddenInputs }: { draft: 
 
   useEffect(() => {
     const savedName = localStorage.getItem("tp_name");
-    const savedEmail = localStorage.getItem("tp_email");
+    const savedEmail = localStorage.getItem("pallinky_host_email") || localStorage.getItem("tp_email");
     if (!name && savedName) setName(savedName);
     if (!email && savedEmail) setEmail(savedEmail);
   }, []);
 
   useEffect(() => {
     localStorage.setItem("tp_name", name);
-    localStorage.setItem("tp_email", email);
+    localStorage.setItem("pallinky_host_email", email);
   }, [name, email]);
 
   const handlePushToggle = async () => {
     try {
       if (!isPushEnabled) {
-        if (!('serviceWorker' in navigator)) {
-          alert("Debug: Browser does not support Service Workers.");
-          return;
-        }
-
+        if (!('serviceWorker' in navigator)) return;
         const registration = await navigator.serviceWorker.getRegistration();
-        if (!registration) {
-          alert("Debug: No Service Worker found. Open this from your Home Screen!");
-          return;
-        }
-
+        if (!registration) return;
         const sub = await subscribeToPush(email);
         setPushSubscription(sub);
         setIsPushEnabled(true);
@@ -47,14 +39,22 @@ export function Step4Create({ draft, action, backHref, hiddenInputs }: { draft: 
       }
     } catch (err: any) {
       console.error(err);
-      alert(`Debug Error: ${err.message || "Unknown error"}`);
     }
   };
 
   return (
-    <form action={action} className="c-stack" style={{ display: "flex", flexDirection: "column", minHeight: 400 }}>
+    <form 
+      action={action} 
+      className="c-stack" 
+      style={{ 
+        display: "flex", 
+        flexDirection: "column", 
+        gap: "var(--space-4)" 
+      }}
+    >
       {hiddenInputs}
       <input type="hidden" name="push_subscription" value={JSON.stringify(pushSubscription)} />
+      <input type="hidden" name="host_email" value={email} />
 
       <div className="c-stack" style={{ gap: "var(--space-3)" }}>
         <label className="c-field">
@@ -64,7 +64,7 @@ export function Step4Create({ draft, action, backHref, hiddenInputs }: { draft: 
 
         <label className="c-field">
           <span className="c-label">Email Address</span>
-          <input name="host_email" type="email" required value={email} onChange={e => setEmail(e.target.value)} className="c-input" />
+          <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="c-input" />
         </label>
 
         <div className="c-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px' }}>
@@ -99,16 +99,7 @@ export function Step4Create({ draft, action, backHref, hiddenInputs }: { draft: 
         </div>
       </div>
 
-      <div style={{ flex: 1 }} />
-
-      <button 
-        type="button" 
-        onClick={() => window.location.reload()}
-        style={{ fontSize: '10px', opacity: 0.5, marginBottom: '10px', background: 'none', border: 'none', color: 'inherit' }}
-      >
-        ↻ Refresh App
-      </button>
-
+      {/* Navigation is now the absolute bottom of the form stack */}
       <BottomNav
         left={<ArrowNav dir="left" kind="link" href={backHref} ariaLabel="Back" />}
         right={<ArrowNav dir="right" kind="submit" ariaLabel="Create invite" disableWhenInvalid={false} />}

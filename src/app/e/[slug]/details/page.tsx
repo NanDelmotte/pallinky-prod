@@ -1,4 +1,7 @@
-// src/app/e/[slug]/details/page.tsx
+/**
+ * Path: src/app/e/[slug]/details/page.tsx
+ */
+
 import Link from "next/link";
 import Shell from "@/components/Shell";
 import { createSupabaseServer } from "@/lib/supabase/server";
@@ -7,22 +10,9 @@ import { formatFriendlyDateAtTime } from "@/lib/time";
 
 type Row = { name: string; status: "yes" | "maybe" | "no"; responded_at: string };
 
-function splitByStatus(rows: Row[]) {
-  const yes: Row[] = [];
-  const maybe: Row[] = [];
-  const no: Row[] = [];
-  for (const r of rows) {
-    if (r.status === "yes") yes.push(r);
-    else if (r.status === "maybe") maybe.push(r);
-    else no.push(r);
-  }        
-  return { yes, maybe, no };
-}
-
 export default async function DetailsPage({ params }: { params: { slug: string } }) {
   const supabase = createSupabaseServer();
 
-  // 1. Fetch Event Details (Using ilike for case-insensitive Tarti-flette safety)
   const { data: e } = await supabase
     .from("events")
     .select("*")
@@ -39,18 +29,14 @@ export default async function DetailsPage({ params }: { params: { slug: string }
     );
   }
 
-  // 2. Fetch Guest List using the RPC (Matches Host View Logic)
-  const { data: list } = await supabase.rpc("get_guest_list", { 
-    p_slug: params.slug 
-  });
-
+  const { data: list } = await supabase.rpc("get_guest_list", { p_slug: params.slug });
   const rows = (list || []).map((r: any) => ({
     name: r.name,
     status: r.status,
     responded_at: r.responded_at || r.created_at
   })) as Row[];
 
-  // 3. Deduplicate (Keeping latest response per name)
+  // Deduplicate and sort
   const latestByName = new Map<string, Row>();
   for (const r of rows) {
     const key = r.name.trim().toLowerCase();
@@ -60,71 +46,68 @@ export default async function DetailsPage({ params }: { params: { slug: string }
     }
   }
 
-  const deduped = Array.from(latestByName.values()).sort(
-    (a, b) => new Date(b.responded_at).getTime() - new Date(a.responded_at).getTime()
-  );
+  const deduped = Array.from(latestByName.values());
+  const grouped = {
+    yes: deduped.filter(r => r.status === "yes"),
+    maybe: deduped.filter(r => r.status === "maybe"),
+    no: deduped.filter(r => r.status === "no")
+  };
 
-  const grouped = splitByStatus(deduped);
   const paletteKey = paletteForGif(e.gif_key ?? null);
   const whenLine = e.starts_at ? formatFriendlyDateAtTime(e.starts_at) : null;
 
   return (
-    <Shell paletteKey={paletteKey} tightCard>
-      <div className="c-stack">
-        <section className="c-section">
-          <div style={{ display: "grid", gap: 4 }}>
-            <div className="c-title" style={{ fontSize: 18, margin: 0 }}>
-              {e.title}
-            </div>
+    <Shell paletteKey={paletteKey}>
+      <div className="c-stack" style={{ gap: "var(--space-4)" }}>
+        
+        {/* Event Header */}
+        <section className="c-stack" style={{ gap: "var(--space-2)" }}>
+          <div style={{ display: "grid", gap: "4px" }}>
+            <h1 className="c-title" style={{ fontSize: "22px" }}>{e.title}</h1>
             {whenLine && (
-              <div className="c-subtitle" style={{ fontSize: 13, opacity: 0.75, margin: 0 }}>
+              <div style={{ fontWeight: 600, fontSize: "15px", color: "var(--text)" }}>
                 {whenLine}
               </div>
             )}
-            {e.host_name && <div className="c-help" style={{ margin: 0 }}>Hosted by {e.host_name}</div>}
+            {e.location && (
+              <div style={{ fontSize: "15px", opacity: 0.8, color: "var(--text)" }}>
+                📍 {e.location}
+              </div>
+            )}
           </div>
 
-          {e.location && <div className="c-help">{e.location}</div>}
-
           {e.cover_image_url && (
-            <div className="c-mediaPreview" style={{ marginTop: "var(--space-2)" }}>
+            <div className="c-mediaPreview">
               <img src={e.cover_image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             </div>
           )}
 
           {e.description && (
-            <div className="c-help" style={{ whiteSpace: "pre-wrap", lineHeight: 1.45 }}>
+            <div style={{ fontSize: "15px", whiteSpace: "pre-wrap", lineHeight: 1.5, color: "var(--text)", opacity: 0.9 }}>
               {e.description}
             </div>
           )}
-
-          {e.status === "cancelled" && (
-            <div style={{ padding: 10, borderRadius: "var(--radius-md)", border: "1px solid var(--border)", background: "var(--surface-strong)", fontWeight: 650, marginTop: 10 }}>
-              This event has been cancelled.
-            </div>
-          )}
+          
+          <div style={{ fontSize: "13px", opacity: 0.6, color: "var(--text)" }}>
+            Hosted by {e.host_name || "a friend"}
+          </div>
         </section>
 
-        <section className="c-section">
-          <div className="c-actions">
-            {/* FIX: Remove calendar button if date/time is missing */}
-            {e.starts_at && (
-              <a className="c-btnSecondary" href={`/e/${params.slug}/calendar.ics`}>
-                Save to calendar
-              </a>
-            )}
-            <Link className="c-btnSecondary" href={`/e/${params.slug}`}>Change RSVP</Link>
-            <Link className="c-btnSecondary" href="/create">Create your own event</Link>
-          </div>
+        {/* Actions */}
+        <section className="c-actions">
+          {e.starts_at && (
+            <a className="c-btnSecondary" href={`/e/${params.slug}/calendar.ics`}>Save to Calendar</a>
+          )}
+          <Link className="c-btnSecondary" href={`/e/${params.slug}`}>Change RSVP</Link>
         </section>
 
         <div className="c-divider" />
 
-        <section className="c-section">
-          <div className="c-sectionTitle">Guest list</div>
+        {/* Guest List pills */}
+        <section className="c-stack">
+          <div className="c-sectionTitle">Who's coming</div>
           <GuestGroup title="Going" rows={grouped.yes} />
           <GuestGroup title="Maybe" rows={grouped.maybe} />
-          <GuestGroup title="No" rows={grouped.no} />
         </section>
       </div>
     </Shell>
@@ -132,20 +115,31 @@ export default async function DetailsPage({ params }: { params: { slug: string }
 }
 
 function GuestGroup({ title, rows }: { title: string; rows: { name: string }[] }) {
+  if (rows.length === 0) return null;
+
   return (
-    <section style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "var(--space-3)", background: "var(--surface)", marginBottom: "var(--space-3)" }}>
-      <div style={{ fontWeight: 700, marginBottom: "var(--space-2)" }}>{title} ({rows.length})</div>
-      {rows.length ? (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-          {rows.map((r, i) => (
-            <span key={`${r.name}-${i}`} style={{ padding: "6px 10px", borderRadius: 999, border: "1px solid var(--border)", background: "var(--surface-strong)", fontWeight: 600, fontSize: 13 }}>
-              {r.name}
-            </span>
-          ))}
-        </div>
-      ) : (
-        <div className="c-help">—</div>
-      )}
-    </section>
+    <div className="c-stack" style={{ gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
+      <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", opacity: 0.7 }}>
+        {title} ({rows.length})
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+        {rows.map((r, i) => (
+          <span 
+            key={`${r.name}-${i}`} 
+            style={{ 
+              padding: "6px 12px", 
+              borderRadius: "999px", 
+              border: "1px solid var(--border)", 
+              background: "var(--surface-strong)", 
+              color: "var(--text)",
+              fontWeight: 600, 
+              fontSize: "14px" 
+            }}
+          >
+            {r.name}
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }

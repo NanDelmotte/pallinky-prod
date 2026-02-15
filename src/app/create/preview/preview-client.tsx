@@ -1,67 +1,82 @@
-/* src/app/create/preview/page.tsx */
+// src/app/create/preview/preview-client.tsx
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
-import Shell from "@/components/Shell";
-import { formatFriendlyDateAtTime } from "@/lib/time";
 import InviteCard from "@/components/InviteCard";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
-type EventSummary = {
-  host_name: string;
-  title: string;
-  description: string | null;
-  starts_at: string | null;
-  ends_at?: string | null;
-  location: string | null;
-  gif_key?: string | null;
-  cover_image_url?: string | null;
-  status?: "active" | "cancelled" | string;
-};
-
-function getPaletteVariables(key?: string | null): Record<string, string> {
-  const k = (key || "").trim().toLowerCase();
-  const palettes: Record<string, any> = {
-    girly: { "--bg": "#f4bbd3", "--accent": "#fe5d9f", "--text": "#2b1f24" },
-    fiesta: { "--bg": "#1729ae", "--accent": "#fe20e8", "--text": "#ffffff" },
-    zen: { "--bg": "#f8e9dc", "--accent": "#43691b", "--text": "#1f2a1b" },
-    classy: { "--bg": "#03172f", "--accent": "#efd466", "--text": "#fff7b6" },
-    spicy: { "--bg": "#656c12", "--accent": "#ecc216", "--text": "#ffffff" },
-  };
-  return palettes[k] || palettes.zen;
-}
-
-export default function PreviewPage({ searchParams }: { searchParams: any }) {
+export default function PreviewClient({ 
+  event, 
+  slug, 
+  mt, 
+  whenLine 
+}: { 
+  event: any; 
+  slug: string; 
+  mt: string; 
+  whenLine: string; 
+}) {
   const router = useRouter();
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [qrOpen, setQrOpen] = useState(false);
 
-  // Extract values from searchParams to satisfy the build
-  const slug = searchParams?.slug || "";
-  const mt = searchParams?.mt || "";
-  const event: EventSummary = {
-    host_name: searchParams?.host_name || "",
-    title: searchParams?.title || "",
-    description: searchParams?.description || null,
-    starts_at: searchParams?.starts_at || null,
-    location: searchParams?.location || null,
-    gif_key: searchParams?.gif_key || "zen",
-  };
+  // Local theme mapping to ensure the card "owns" its colors 
+  // regardless of the Shell's background.
+  const cardTheme = useMemo(() => {
+    const k = (event.gif_key || "zen").trim().toLowerCase();
+    const palettes: Record<string, any> = {
+      girly: { 
+        "--box-bg": "#f4bbd3", 
+        "--button-bg": "#fe5d9f", 
+        "--text": "#2b1f24", 
+        "--button-txt": "#ffffff" 
+      },
+      fiesta: { 
+        "--box-bg": "#1729ae", 
+        "--button-bg": "#fe20e8", 
+        "--text": "#ffffff", 
+        "--button-txt": "#ffffff" 
+      },
+      zen: { 
+        "--box-bg": "#f8e9dc", 
+        "--button-bg": "#43691b", 
+        "--text": "#1f2a1b", 
+        "--button-txt": "#ffffff" 
+      },
+      classy: { 
+        "--box-bg": "#03172f", 
+        "--button-bg": "#efd466", 
+        "--text": "#fff7b6", 
+        "--button-txt": "#03172f" 
+      },
+      spicy: { 
+        "--box-bg": "#656c12", 
+        "--button-bg": "#ecc216", 
+        "--text": "#ffffff", 
+        "--button-txt": "#000000" 
+      },
+    };
+    return palettes[k] || palettes.zen;
+  }, [event.gif_key]);
+
+  useEffect(() => {
+    if (event.host_email) {
+      localStorage.setItem('pallinky_host_email', event.host_email);
+    }
+  }, [event.host_email]);
 
   const shareUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
     return `${window.location.protocol}//${window.location.host}/e/${slug}`;
   }, [slug]);
 
-  const whenLine = useMemo(() => 
-    event.starts_at ? formatFriendlyDateAtTime(event.starts_at) : ""
-  , [event.starts_at]);
-
   const shareText = useMemo(() => {
-    const host = event.host_name?.trim() || "You’re invited";
-    const title = event.title?.trim() ? ` to ${event.title}` : "";
-    return `${shareUrl} Yippee! ${host}${title}. Click here to RSVP.`;
+    const host = event.host_name?.trim() || "Someone";
+    const inviteAction = event.title?.trim() ? `is inviting you to ${event.title}` : "is inviting you";
+    return `Yippee! ${host} ${inviteAction}. Click here to RSVP: ${shareUrl}`;
   }, [shareUrl, event.host_name, event.title]);
 
   useEffect(() => {
@@ -82,53 +97,50 @@ export default function PreviewPage({ searchParams }: { searchParams: any }) {
     } catch (e) { /* ignore cancel */ }
   }
 
-  const paletteStyles = useMemo(() => getPaletteVariables(event.gif_key), [event.gif_key]);
-
   return (
-    <Shell title="Ready to share" paletteKey={null}>
-      <div className="c-stack">
-        <div 
-          className="c-card" 
-          style={{ 
-            ...paletteStyles as any,
-            backgroundColor: "var(--bg)", 
-            padding: "var(--space-2)",
-            border: "none" 
-          }}
-        >
-          <div className="c-card" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-            <InviteCard 
-              slug={slug} 
-              event={event} 
-              mode="preview" 
-              editHref={`/m/${mt}/edit`}
-              showHeaderInCard 
-              headerWhenLine={whenLine} 
-            />
-          </div>
-        </div>
+    <div className="c-stack">
+      {/* Inject the theme variables here. 
+        InviteCard will now use these locally defined colors.
+      */}
+      <div style={{ ...cardTheme as any }}>
+        <InviteCard 
+          slug={slug} 
+          event={event} 
+          mode="preview" 
+          editHref={`/m/${mt}/edit`}
+          showHeaderInCard 
+          headerWhenLine={whenLine} 
+        />
+      </div>
 
-        <div className="c-stack" style={{ gap: "var(--space-2)" }}>
-          <button className="c-btnPrimary" onClick={handleShare}>
-            Share with guests
-          </button>
-          
-          <a href={`/m/${mt}/calendar.ics`} className="c-btnSecondary">
+      <div className="c-stack" style={{ gap: "var(--space-2)" }}>
+        <button className="c-btnPrimary" onClick={handleShare}>
+          Share with guests
+        </button>
+        
+        {event.starts_at && (
+          <a href={`/m/${mt}/calendar.ics`} className="c-btnSecondary" style={{ textAlign: 'center' }}>
             Add to my calendar
           </a>
-        </div>
-
-        <div className="c-divider" />
-        
-        <details className="c-section" onToggle={(e) => setQrOpen((e.currentTarget as any).open)}>
-          <summary className="c-btnGhost" style={{ textAlign: 'center' }}>Show QR code</summary>
-          {qrDataUrl && (
-            <div style={{ display: "flex", justifyContent: "center", paddingTop: "var(--space-3)" }}>
-              <img src={qrDataUrl} alt="QR" className="c-card" style={{ width: 180, padding: 10, background: "white" }} />
-            </div>
-          )}
-        </details>
+        )}
       </div>
-    </Shell>
+
+      <div style={{ textAlign: 'center', marginTop: 'var(--space-2)' }}>
+        <Link href="/my-events" className="c-help" style={{ textDecoration: 'underline' }}>
+          View all my events
+        </Link>
+      </div>
+
+      <div className="c-divider" />
+      
+      <details className="c-section" onToggle={(e) => setQrOpen((e.currentTarget as any).open)}>
+        <summary className="c-btnGhost" style={{ textAlign: 'center' }}>Show QR code</summary>
+        {qrDataUrl && (
+          <div style={{ display: "flex", justifyContent: "center", paddingTop: "var(--space-3)" }}>
+            <img src={qrDataUrl} alt="QR" className="c-card" style={{ width: 180, padding: 10, background: "white" }} />
+          </div>
+        )}
+      </details>
+    </div>
   );
 }

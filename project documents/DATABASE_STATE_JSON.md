@@ -286,6 +286,53 @@
               "is_generated": "NEVER"
             },
             {
+              "name": "email_lc",
+              "type": "text",
+              "default": null,
+              "nullable": "NO",
+              "is_generated": "NEVER"
+            },
+            {
+              "name": "subscription_json",
+              "type": "jsonb",
+              "default": null,
+              "nullable": "NO",
+              "is_generated": "NEVER"
+            },
+            {
+              "name": "user_agent",
+              "type": "text",
+              "default": null,
+              "nullable": "YES",
+              "is_generated": "NEVER"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp with time zone",
+              "default": "now()",
+              "nullable": "NO",
+              "is_generated": "NEVER"
+            },
+            {
+              "name": "updated_at",
+              "type": "timestamp with time zone",
+              "default": "now()",
+              "nullable": "NO",
+              "is_generated": "NEVER"
+            }
+          ],
+          "table_name": "push_subscriptions"
+        },
+        {
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "default": "gen_random_uuid()",
+              "nullable": "NO",
+              "is_generated": "NEVER"
+            },
+            {
               "name": "event_id",
               "type": "uuid",
               "default": null,
@@ -360,10 +407,22 @@
           "definition": "CREATE OR REPLACE FUNCTION public.get_pending_outbox(p_limit integer)\n RETURNS SETOF notifications_outbox\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nBEGIN\n    RETURN QUERY\n    SELECT *\n    FROM public.notifications_outbox\n    WHERE status = 'pending'\n    ORDER BY created_at ASC\n    LIMIT p_limit\n    FOR UPDATE SKIP LOCKED;\nEND;\n$function$\n"
         },
         {
+          "args": "p_email text",
+          "name": "get_host_dashboard_by_email",
+          "returns": "TABLE(id uuid, title text, slug text, manage_handle text, starts_at timestamp with time zone, status text, rsvp_count bigint)",
+          "definition": "CREATE OR REPLACE FUNCTION public.get_host_dashboard_by_email(p_email text)\n RETURNS TABLE(id uuid, title text, slug text, manage_handle text, starts_at timestamp with time zone, status text, rsvp_count bigint)\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nbegin\n  return query\n  select \n    e.id,\n    e.title,\n    e.slug,\n    e.manage_handle,\n    e.starts_at,\n    e.status,\n    count(r.id) as rsvp_count\n  from events e\n  left join rsvps r on r.event_id = e.id\n  where e.host_email = p_email\n    and e.status != 'cancelled'  -- 🟢 This line hides the cancelled ones\n  group by e.id\n  order by e.starts_at desc;\nend;\n$function$\n"
+        },
+        {
           "args": "p_id uuid",
           "name": "mark_outbox_sent",
           "returns": "void",
           "definition": "CREATE OR REPLACE FUNCTION public.mark_outbox_sent(p_id uuid)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nBEGIN\n    UPDATE public.notifications_outbox\n    SET status = 'sent',\n        attempts = attempts + 1\n    WHERE id = p_id;\nEND;\n$function$\n"
+        },
+        {
+          "args": "p_email text, p_subscription_json jsonb, p_user_agent text",
+          "name": "save_push_subscription",
+          "returns": "void",
+          "definition": "CREATE OR REPLACE FUNCTION public.save_push_subscription(p_email text, p_subscription_json jsonb, p_user_agent text DEFAULT NULL::text)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nBEGIN\n    INSERT INTO public.push_subscriptions (email_lc, subscription_json, user_agent)\n    VALUES (lower(trim(p_email)), p_subscription_json, p_user_agent)\n    ON CONFLICT (email_lc, subscription_json) \n    DO UPDATE SET \n        updated_at = now(),\n        user_agent = EXCLUDED.user_agent;\nEND;\n$function$\n"
         },
         {
           "args": "",
@@ -420,7 +479,7 @@
           "definition": "CREATE OR REPLACE FUNCTION public.submit_rsvp(p_slug text, p_name text, p_status text, p_guest_token text DEFAULT NULL::text, p_email text DEFAULT NULL::text, p_message text DEFAULT NULL::text)\n RETURNS json\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nDECLARE\n  v_event_id UUID;\n  v_result JSON;\n  v_existing_token TEXT;\n  v_existing_status TEXT;\nBEGIN\n  -- 1. Get Event ID\n  SELECT id INTO v_event_id FROM public.events WHERE slug = p_slug;\n  \n  IF v_event_id IS NULL THEN\n    RETURN json_build_object('error', 'Event not found');\n  END IF;\n\n  -- 2. Check for an existing RSVP to prevent redundant updates (Idempotency)\n  -- This prevents \"double-tap\" logic from re-running the heavy write if nothing changed\n  SELECT guest_token, status INTO v_existing_token, v_existing_status\n  FROM public.rsvps \n  WHERE event_id = v_event_id \n    AND (email_lc = LOWER(p_email) OR guest_token = p_guest_token);\n\n  IF v_existing_token IS NOT NULL AND v_existing_status = p_status AND v_existing_token = p_guest_token THEN\n      RETURN json_build_object('success', true, 'guest_token', v_existing_token, 'note', 'idempotent');\n  END IF;\n\n  -- 3. Insert or Update\n  INSERT INTO public.rsvps (\n    event_id, name, status, guest_token, email, message\n  )\n  VALUES (\n    v_event_id, p_name, p_status, \n    COALESCE(p_guest_token, encode(gen_random_bytes(16), 'hex')), \n    p_email, p_message\n  )\n  ON CONFLICT ON CONSTRAINT rsvps_event_id_email_lc_key\n  DO UPDATE SET \n    name = EXCLUDED.name, \n    status = EXCLUDED.status,\n    message = EXCLUDED.message,\n    guest_token = EXCLUDED.guest_token,\n    updated_at = now() -- Track when they last changed their mind\n  RETURNING json_build_object('success', true, 'guest_token', rsvps.guest_token) \n  INTO v_result;\n\n  RETURN v_result;\nEND;\n$function$\n"
         }
       ],
-      "timestamp": "2026-02-14T09:55:54.558318+00:00"
+      "timestamp": "2026-02-15T13:36:58.272618+00:00"
     }
   }
 ]

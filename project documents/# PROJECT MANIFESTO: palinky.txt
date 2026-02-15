@@ -1,116 +1,49 @@
-# PROJECT MANIFESTO: PALLINKY (V4.01
-# Path: project documents/manifesto.md
-# Status: Phase 3 - Production Stable & Automated CI/CD
+# PROJECT MANIFESTO: PALLINKY V5.1
+# File Path: PROJECT_MANIFESTO.md
+# Status: Phase 4 - PWA app testing on IOS/Android (Web Push ACTIVE)
 
-Developer Profile: Solo, Non-Developer (High Automation, Low Maintenance)
+[cite_start]Developer Profile: Solo, Non-Developer (High Automation, Low Maintenance) [cite: 1]
 
 ## 0. WORKING RULES
-1. **File Headers:** Mandatory file path comment at the top of every code block.
+1. [cite_start]**File Headers:** Mandatory file path comment at the top of every code block. [cite: 2]
 2. **Replacement Policy:**
-   * **< 3 lines:** Use `// Old... // New...` format.
-   * **> 3 lines:** Request the current code first, then provide a **full fresh page**.
-3. **Tone:** Brief, professional, direStatus: Phase 3.5 - UI Polish & PWA Infrastructure
-Developer Profile: Solo, Non-Developer (High Automation, Low Maintenance)
-
-0. WORKING RULES
-File Headers: Mandatory file path comment at the top of every code block.
-
-Replacement Policy:
-
-< 3 lines: Use // Old... // New... format.
-
-> 3 lines: Request the current code first, then provide a full fresh page.
-
-Tone: Brief, professional, direct. No coaching or pedagogical explanations.
-
-DIAGNOSTICS FIRST: Zero tolerance for guessing. Request fly logs, Supabase SQL lookups, or browser console outputs before proposing code. If the root cause is unclear, provide commands to extract diagnostics.
-
-One Step at a Time: Address one issue per response unless explicitly asked for a batch fix.
-
-1. TECH STACK & CONSTRAINTS
-Framework: Next.js (App Router) in src/app.
-
-Hosting: Fly.io (pallinky-prod).
-
-Database: Supabase (Schema: public).
-
-CI/CD: GitHub Actions (Auto-deploy on git push origin main).
-
-Email: Resend (Domain: pallinky.com).
-
-Worker: notifications_outbox processed by cron-job.org hitting /api/worker/outbox.
-
-Environment Branding:
-
-Production: Pallinky (pallinky.com)
-
-Local/Dev: Tarti-flette (localhost:3000)
-
-2. KEY ROUTES & ENGINES
-/e/[slug] — Guest RSVP & Event Details.
-
-/m/[token] — Host Management (Uses manage_handle).
-
-/create/details — 5-step event creation engine (URL-parameter state).
-
-/api/worker/outbox — Secured POST route for email processing.
-
-3. DATABASE & LOGIC
-Creation: create_event_draft (RPC). Generates manage_handle (MD5), auto-inserts Host RSVP, enqueues host_manage_link.
-
-RSVP Logic: submit_rsvp (RPC). Constraint rsvps_event_id_email_lc_key ensures 1 RSVP per email/event. WARNING: email_lc is a generated column; never include it in INSERT/UPDATE.
-
-Worker Security: Requires CRON_SECRET env var validation.
-
-Concurrency: Worker uses FOR UPDATE SKIP LOCKED via RPC get_pending_outbox.
-
-Storage: Bucket covers (Public). Verify storage.objects policies if uploads fail.
-
-4. BRANDING, TIME & PWA
-App Name: Dynamic based on NODE_ENV.
-
-Timezone: "Amsterdam Standard" (Amsterdam Local <-> UTC).
-
-PWA Status: Icons/Manifest are functional. Web Push infrastructure exists in the file tree (sw.js) but is NOT active (no DB tables yet).
-
-Current UI Friction: BottomNav buttons currently clash with native iOS gesture bars (Home Bar) on iPhone.ct. No coaching. No pedagogical explanations.
-4. **Diagnostics First:** Ask clarifying questions or request `fly logs` / `Supabase SQL` lookups before proposing code changes.
-5. **No Guessing:** If the root cause is unclear, provide commands to extract diagnostics.
-6. **One Step at a Time:** Address one issue per response unless explicitly asked for a batch fix.
+   * [cite_start]**< 3 lines:** Use `// Old... // New...` format. [cite: 3]
+   * [cite_start]**> 3 lines:** Request the current code first, then provide a **full fresh page**. [cite: 4]
+3. [cite_start]**Tone:** Brief, professional. [cite: 4]
+4. [cite_start]**DIAGNOSTICS FIRST:** Zero tolerance for guessing. [cite: 5, 23]
+   * [cite_start]Request fly logs, Supabase SQL lookups, or browser console outputs before proposing code. [cite: 5, 23]
+   * [cite_start]If the root cause is unclear, provide instructions to extract diagnostics. [cite: 6, 24]
+5. [cite_start]**One Step at a Time:** Address one issue per response unless explicitly asked for a batch fix. [cite: 7, 25]
 
 ## 1. TECH STACK & CONSTRAINTS
-* **Framework:** Next.js (App Router) in `src/app`.
-* **Hosting:** Fly.io (`pallinky-prod`).
-* **Database:** Supabase (Schema: `public`).
-* **CI/CD:** GitHub Actions (Auto-deploy on `git push origin main`).
-* **Email:** Resend (Domain: `pallinky.com`).
-* **Worker:** `notifications_outbox` processed by `cron-job.org` hitting `/api/worker/outbox`.
+* [cite_start]**Framework:** Next.js (App Router) in `src/app`. [cite: 8, 26]
+* [cite_start]**Hosting:** Fly.io (`pallinky-prod`). [cite: 8, 26]
+* [cite_start]**Database:** Supabase (Schema: `public`). [cite: 8, 27]
+* [cite_start]**CI/CD:** GitHub Actions (Auto-deploy on `git push origin main`). [cite: 9, 27]
+* [cite_start]**Email:** Resend (Domain: `pallinky.com`). [cite: 9, 27]
+* [cite_start]**Worker:** `notifications_outbox` processed by `cron-job.org` hitting `/api/worker/outbox`. [cite: 9, 28]
 * **Environment Branding:**
-    * **Production:** Pallinky (`pallinky.com`)
-    * **Local/Dev:** Tarti-flette (`localhost:3000`)
+    * [cite_start]**Production:** Pallinky (`pallinky.com`) [cite: 10, 28]
+    * [cite_start]**Local/Dev:** Tarti-flette (`localhost:3000`) [cite: 10, 28]
 
-## 2. KEY ROUTES
-* `/e/[slug]` — Guest RSVP & Event Details.
-* `/m/[token]` — Host Management (Uses `manage_handle`).
-* `/create/details` — 5-step event creation engine.
-* `/api/worker/outbox` — Secured POST route for email processing.
+## 2. COMMUNICATION ENGINES
+* [cite_start]**Email Engine:** Driven by Resend; triggered via `notifications_outbox`. [cite: 11]
+* [cite_start]**Push Engine (`send-push`):** Fully active for Host and Guest infrastructure. [cite: 11, 12]
+    * [cite_start]**Logic:** Uses `web-push` library to dispatch encrypted payloads to browser endpoints. [cite: 12]
+    * [cite_start]**Storage:** Pulls active subscriptions from `push_subscriptions` table. [cite: 12]
+* [cite_start]**Worker Security:** Requires `x-cron-secret` or `Bearer` validation matching `CRON_SECRET`. [cite: 13, 18, 32]
 
-## 3. DATABASE & LOGIC
-* **Creation:** `create_event_draft` (RPC). Generates `manage_handle` (MD5), auto-inserts Host RSVP, enqueues `host_manage_link`.
-* **RSVP Logic:** `submit_rsvp` (RPC). Handles upserts. Constraint `rsvps_event_id_email_lc_key` ensures 1 RSVP per email/event.
-* **Worker Security:** Requires `Authorization: Bearer` or `x-cron-secret` matching `CRON_SECRET` env var.
-* **Concurrency:** Worker uses `FOR UPDATE SKIP LOCKED` via RPC `get_pending_outbox` to prevent duplicate sends.
-* **Communications:** * `send_host_message_by_manage_token`: Bulk enqueue messages.
-    * `cancel_event_by_manage_token`: Status update + outbox enqueue.
-    NFRASTRUCTURE REQUIREMENT: STORAGE
+## 3. KEY ROUTES & DATABASE LOGIC
+* [cite_start]**Routes:** `/e/[slug]` (Guest RSVP), `/m/[token]` (Host Management), `/create/details` (Creation). [cite: 14, 15, 29]
+* **Creation:** `create_event_draft` (RPC). [cite_start]Generates `manage_handle` (MD5). [cite: 16, 30, 31]
+* [cite_start]**Auth Model:** No traditional Auth; access is governed by `manage_handle` tokens. [cite: 14, 31]
+* [cite_start]**RSVP Logic:** `submit_rsvp` (RPC). [cite: 16, 31]
+    * [cite_start]**Constraint:** `rsvps_event_id_email_lc_key` ensures 1 RSVP per email/event. [cite: 17, 32]
+    * **WARNING:** `email_lc` is a generated column; [cite_start]**never** include it in `INSERT`/`UPDATE`. [cite: 17]
+* [cite_start]**Concurrency:** Worker uses `FOR UPDATE SKIP LOCKED` via `get_pending_outbox`. [cite: 18, 33]
 
-Bucket Name: covers
-
-Privacy: Public
-
-Constraint: If images fail to upload/render in prod, verify the storage.objects policies match the SQL above.
-
-## 4. BRANDING & TIME
-* **App Name:** Dynamic based on `NODE_ENV`.
-* **Base URL:** Automatically adjusts between `localhost:3000` and `pallinky.com` for metadata and email links.
-* **Timezone:** Calendar `.ics` generation assumes Amsterdam local -> UTC conversion.
+## 4. BRANDING, TIME & PWA
+* [cite_start]**App Name:** Dynamic based on `NODE_ENV`. [cite: 19, 36]
+* [cite_start]**Timezone:** "Amsterdam Standard" (Local UI <-> UTC DB). [cite: 20, 38]
+* **PWA Status:** Fully functional. [cite_start]Icons, manifest, and Web Push are live. [cite: 21]
+* [cite_start]**UI Priority:** `InviteCard` prioritizes `cover_image_url` over GIFs. [cite: 22]

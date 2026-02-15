@@ -89,5 +89,17 @@ export async function step4CreateAction(formData: FormData) {
 
   if (error) throw new Error(error.message);
   const row = Array.isArray(data) ? data[0] : data;
-  redirect(`/create/preview?slug=${row.slug}&mt=${row.manage_token}`);
+
+  // Create a search params object to carry the data to the preview page
+  const previewParams = new URLSearchParams();
+  previewParams.set("slug", row.slug);
+  previewParams.set("mt", row.manage_token);
+  previewParams.set("host_name", String(formData.get("host_name") || ""));
+  previewParams.set("title", title);
+  previewParams.set("location", String(formData.get("location") || ""));
+  previewParams.set("starts_at", startsAtLocal); // Using the local time string for the preview
+  previewParams.set("gif_key", String(formData.get("gif_key") || "zen"));
+  previewParams.set("description", String(formData.get("description") || ""));
+
+  redirect(`/create/preview?${previewParams.toString()}`);
 }

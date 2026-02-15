@@ -4,12 +4,12 @@
 import React, { useEffect, useRef, useState } from "react";
 
 type Props = {
-  dir: "left" | "right";
+  dir: "left" | "right" | "check"; // Added check glyph support
   kind?: "submit" | "link";
-  href?: string; // required when kind="link"
+  href?: string;
   ariaLabel: string;
-  disableWhenInvalid?: boolean; // only used for submit
-  disabled?: boolean; // only used for link (rare)
+  disableWhenInvalid?: boolean;
+  disabled?: boolean;
 };
 
 export default function ArrowNav({
@@ -27,49 +27,41 @@ export default function ArrowNav({
 
   useEffect(() => {
     if (kind !== "submit") return;
-
     const btn = btnRef.current;
     const form = btn?.closest("form");
     if (!btn || !form) return;
 
     const sync = () => {
-      if (!disableWhenInvalid) {
-        setIsDisabled(false);
-        return;
-      }
-      setIsDisabled(!form.checkValidity());
+      setIsDisabled(disableWhenInvalid ? !form.checkValidity() : false);
     };
 
     sync();
-
-    const onAnyChange = () => sync();
-    form.addEventListener("input", onAnyChange, true);
-    form.addEventListener("change", onAnyChange, true);
-
+    form.addEventListener("input", sync, true);
+    form.addEventListener("change", sync, true);
     return () => {
-      form.removeEventListener("input", onAnyChange, true);
-      form.removeEventListener("change", onAnyChange, true);
+      form.removeEventListener("input", sync, true);
+      form.removeEventListener("change", sync, true);
     };
   }, [kind, disableWhenInvalid]);
 
-  const glyph = dir === "left" ? "←" : "→";
+  // Use the checkmark glyph if requested, otherwise arrows
+  const glyph = dir === "check" ? "✓" : (dir === "left" ? "←" : "→");
 
   const commonStyle: React.CSSProperties = {
-    width: 52,
-    height: 52,
-    borderRadius: 999,
-    display: "inline-flex",
+    width: 56, // Slightly larger for better touch target
+    height: 56,
+    borderRadius: 28,
+    display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 22,
-    lineHeight: 1,
-    padding: 0,
-    textDecoration: "none",
+    fontSize: 24,
+    fontWeight: "bold",
+    cursor: isDisabled ? "default" : "pointer",
+    transition: "transform 0.1s active",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.1)" // Adds depth so it doesn't get lost
   };
 
   if (kind === "link") {
-    if (!href) throw new Error("ArrowNav: href is required when kind='link'");
-
     return (
       <a
         href={href}
@@ -79,6 +71,7 @@ export default function ArrowNav({
           ...commonStyle,
           pointerEvents: disabled ? "none" : "auto",
           opacity: disabled ? 0.5 : 1,
+          textDecoration: "none"
         }}
       >
         {glyph}
@@ -93,7 +86,10 @@ export default function ArrowNav({
       className="c-btnPrimary"
       aria-label={ariaLabel}
       disabled={isDisabled}
-      style={commonStyle}
+      style={{
+        ...commonStyle,
+        opacity: isDisabled ? 0.4 : 1,
+      }}
     >
       {glyph}
     </button>

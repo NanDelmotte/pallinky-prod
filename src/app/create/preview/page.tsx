@@ -1,134 +1,59 @@
-/* src/app/create/preview/page.tsx */
-"use client";
-
-import { useEffect, useMemo, useState } from "react";
-import QRCode from "qrcode";
+import { redirect } from "next/navigation";
 import Shell from "@/components/Shell";
+import { createSupabaseServer } from "@/lib/supabase/server";
 import { formatFriendlyDateAtTime } from "@/lib/time";
-import InviteCard from "@/components/InviteCard";
-import { useRouter } from "next/navigation";
+import PreviewClient from "./preview-client";
 
-type EventSummary = {
-  host_name: string;
-  title: string;
-  description: string | null;
-  starts_at: string | null;
-  ends_at?: string | null;
-  location: string | null;
-  gif_key?: string | null;
-  cover_image_url?: string | null;
-  status?: "active" | "cancelled" | string;
-};
+export async function generateMetadata({ searchParams }: { searchParams: any }) {
+  const supabase = createSupabaseServer();
+  const { data } = await supabase
+    .from("events")
+    .select("title, host_name")
+    .eq("slug", searchParams.slug)
+    .single();
 
-function getPaletteVariables(key?: string | null): Record<string, string> {
-  const k = (key || "").trim().toLowerCase();
-  const palettes: Record<string, any> = {
-    girly: { "--bg": "#f4bbd3", "--accent": "#fe5d9f", "--text": "#2b1f24" },
-    fiesta: { "--bg": "#1729ae", "--accent": "#fe20e8", "--text": "#ffffff" },
-    zen: { "--bg": "#f8e9dc", "--accent": "#43691b", "--text": "#1f2a1b" },
-    classy: { "--bg": "#03172f", "--accent": "#efd466", "--text": "#fff7b6" },
-    spicy: { "--bg": "#656c12", "--accent": "#ecc216", "--text": "#ffffff" },
+  return {
+    title: data ? `${data.host_name} invites you to ${data.title}` : "Event Invite",
   };
-  return palettes[k] || palettes.zen;
 }
 
-export default function PreviewPage({ searchParams }: { searchParams: any }) {
-  const router = useRouter();
-  const [qrDataUrl, setQrDataUrl] = useState<string>("");
-  const [qrOpen, setQrOpen] = useState(false);
+export default async function PreviewPage({ searchParams }: { searchParams: any }) {
+  const slug = searchParams?.slug;
+  const mt = searchParams?.mt;
 
-  // Extract values from searchParams to satisfy the build
-  const slug = searchParams?.slug || "";
-  const mt = searchParams?.mt || "";
-  const event: EventSummary = {
-    host_name: searchParams?.host_name || "",
-    title: searchParams?.title || "",
-    description: searchParams?.description || null,
-    starts_at: searchParams?.starts_at || null,
-    location: searchParams?.location || null,
-    gif_key: searchParams?.gif_key || "zen",
-  };
+  if (!slug || !mt) redirect("/create");
 
-  const shareUrl = useMemo(() => {
-    if (typeof window === "undefined") return "";
-    return `${window.location.protocol}//${window.location.host}/e/${slug}`;
-  }, [slug]);
+  const supabase = createSupabaseServer();
+  const { data: event, error } = await supabase
+    .from("events")
+    .select("*")
+    .eq("slug", slug)
+    .single();
 
-  const whenLine = useMemo(() => 
-    event.starts_at ? formatFriendlyDateAtTime(event.starts_at) : ""
-  , [event.starts_at]);
-
-  const shareText = useMemo(() => {
-    const host = event.host_name?.trim() || "You’re invited";
-    const title = event.title?.trim() ? ` to ${event.title}` : "";
-    return `${shareUrl} Yippee! ${host}${title}. Click here to RSVP.`;
-  }, [shareUrl, event.host_name, event.title]);
-
-  useEffect(() => {
-    if (qrOpen && shareUrl) {
-      QRCode.toDataURL(shareUrl, { margin: 1, width: 200 }).then(setQrDataUrl);
-    }
-  }, [shareUrl, qrOpen]);
-
-  async function handleShare() {
-    try {
-      if (navigator.share) {
-        await navigator.share({ text: shareText });
-        router.push(`/m/${mt}`);
-      } else {
-        await navigator.clipboard.writeText(shareText);
-        alert("Invite link copied!");
-      }
-    } catch (e) { /* ignore cancel */ }
+  if (error || !event) {
+    return (
+      <Shell title="Invalid link" subtitle="We couldn't find this event in our database.">
+        <div className="c-stack">
+          <a href="/create" className="c-btnPrimary">Create new event</a>
+        </div>
+      </Shell>
+    );
   }
 
-  const paletteStyles = useMemo(() => getPaletteVariables(event.gif_key), [event.gif_key]);
+  const whenLine = event.starts_at ? formatFriendlyDateAtTime(event.starts_at) : "";
 
   return (
-    <Shell title="Ready to share" paletteKey={null}>
-      <div className="c-stack">
-        <div 
-          className="c-card" 
-          style={{ 
-            ...paletteStyles as any,
-            backgroundColor: "var(--bg)", 
-            padding: "var(--space-2)",
-            border: "none" 
-          }}
-        >
-          <div className="c-card" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-            <InviteCard 
-              slug={slug} 
-              event={event} 
-              mode="preview" 
-              editHref={`/m/${mt}/edit`}
-              showHeaderInCard 
-              headerWhenLine={whenLine} 
-            />
-          </div>
-        </div>
-
-        <div className="c-stack" style={{ gap: "var(--space-2)" }}>
-          <button className="c-btnPrimary" onClick={handleShare}>
-            Share with guests
-          </button>
-          
-          <a href={`/m/${mt}/calendar.ics`} className="c-btnSecondary">
-            Add to my calendar
-          </a>
-        </div>
-
-        <div className="c-divider" />
-        
-        <details className="c-section" onToggle={(e) => setQrOpen((e.currentTarget as any).open)}>
-          <summary className="c-btnGhost" style={{ textAlign: 'center' }}>Show QR code</summary>
-          {qrDataUrl && (
-            <div style={{ display: "flex", justifyContent: "center", paddingTop: "var(--space-3)" }}>
-              <img src={qrDataUrl} alt="QR" className="c-card" style={{ width: 180, padding: 10, background: "white" }} />
-            </div>
-          )}
-        </details>
-      </div>
+    <Shell 
+      title="Ready to share" 
+      subtitle={event.title}
+      paletteKey="zen" // Keep the page background beige (Zen)
+    >
+      <PreviewClient 
+        event={event} 
+        slug={slug} 
+        mt={mt} 
+        whenLine={whenLine} 
+      />
     </Shell>
   );
 }

@@ -1,5 +1,5 @@
-// src/app/create/page.tsx
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import Shell from "@/components/Shell";
 import { paletteForGif } from "@/lib/palette";
 
@@ -16,6 +16,15 @@ export default function CreatePage() {
         <a href="/create/details?step=1" className="c-btnPrimary">
           Start
         </a>
+
+        {/* 🟢 Shortcut for returning hosts */}
+        <Link 
+          href="/my-events" 
+          className="c-btnSecondary" 
+          style={{ justifyContent: 'center', marginTop: 'var(--space-2)' }}
+        >
+          View my existing events
+        </Link>
       </div>
     </Shell>
   );

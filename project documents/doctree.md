@@ -4,8 +4,14 @@
 ./docker-entrypoint.js
 ./next-env.d.ts
 ./supabase
+./supabase/snippets
 ./supabase/migrations
+./supabase/migrations/20260215071957_remote_schema.sql
 ./supabase/migrations/20260212094519_remote_schema.sql
+./supabase/functions
+./supabase/functions/send-push
+./supabase/functions/send-push/deno.json
+./supabase/functions/send-push/index.ts
 ./supabase/config.toml
 ./README.md
 ./public
@@ -19,15 +25,12 @@
 ./package.json
 ./fly.toml
 ./tsconfig.json
-./project documents
-./project documents/universal prompt.md
-./project documents/DBSTATE_SQL.md
-./project documents/# PROJECT MANIFESTO: palinky.txt
-./project documents/DATABASE_STATE_JSON.md
 ./postcss.config.js
 ./src
 ./src/middleware.ts
 ./src/app
+./src/app/my-events
+./src/app/my-events/page.tsx
 ./src/app/layout.tsx
 ./src/app/actions
 ./src/app/actions/rsvp.ts
@@ -52,6 +55,7 @@
 ./src/components
 ./src/components/Shell.tsx
 ./src/components/InviteCard.tsx
+./src/components/HostIdentification.tsx
 ./src/components/ArrowNav.tsx
 ./src/lib
 ./src/lib/appCopy.ts
@@ -65,4 +69,5 @@
 ./src/lib/palette.ts
 ./src/lib/guestTokenClient.ts
 ./src/lib/time.ts
+./src/_env.local
 ./src/env.ts

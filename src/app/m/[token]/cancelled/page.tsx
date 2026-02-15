@@ -1,7 +1,7 @@
-// src/app/m/[token]/ended/page.tsx
 import Link from "next/link";
 import Shell from "@/components/Shell";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import HostIdentification from "@/components/HostIdentification";
 
 export default async function ManageEnded({
   params,
@@ -55,6 +55,9 @@ export default async function ManageEnded({
           : "This event has already taken place."
       }
     >
+      {/* 🟢 Capture email to sync dashboard if they arrived via an old email link */}
+      <HostIdentification email={e.host_email} />
+
       <div className="c-stack">
         <section className="c-section">
           <div style={{ fontWeight: 700, fontSize: 18 }}>
@@ -68,7 +71,14 @@ export default async function ManageEnded({
           </div>
         </section>
 
+        {/* 🟢 New Dashboard Shortcut */}
         <section className="c-section">
+          <Link href="/my-events" className="c-btnSecondary" style={{ justifyContent: 'center' }}>
+            View all my events
+          </Link>
+        </section>
+
+        <section className="c-section" style={{ borderTop: "1px solid var(--border)", paddingTop: "var(--space-3)" }}>
           <Link href="/create/details" className="c-btnPrimary">
             Create a new event
           </Link>

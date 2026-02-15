@@ -1,5 +1,7 @@
-// src/app/m/[token]/edit/page.tsx
-
+/**
+ * Path: src/app/m/[token]/edit/page.tsx
+ * Description: Management edit page for events, utilizing global theme variables.
+ */
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -16,9 +18,12 @@ export default async function ManageEdit({
   params: { token: string };
 }) {
   const supabase = createSupabaseServer();
+  
+  // Fetch event details using the management token
   const { data } = await supabase.rpc("get_event_by_manage_token", {
     p_manage_token: params.token,
   });
+  
   const e = data?.[0];
 
   if (!e) {
@@ -33,6 +38,7 @@ export default async function ManageEdit({
     );
   }
 
+  // Format dates for HTML5 datetime-local input compatibility
   const startsLocal = e.starts_at ? toAmsterdamLocalInputValue(e.starts_at) : "";
   const endsLocal = e.ends_at ? toAmsterdamLocalInputValue(e.ends_at) : "";
   const expiresLocal = e.expires_at ? toAmsterdamLocalInputValue(e.expires_at) : "";
@@ -42,25 +48,31 @@ export default async function ManageEdit({
       <form action={saveAction} className="c-stack" style={{ gap: "var(--space-4)" }}>
         <input type="hidden" name="mt" value={params.token} />
 
-        <div className="c-section" style={{ gap: "var(--space-3)" }}>
+        <section className="c-section">
           <div className="c-sectionTitle">Basics</div>
-
           <div className="c-stack">
             <label className="c-field">
               <div className="c-label">Event title</div>
-              <input name="title" defaultValue={e.title} required className="c-input" />
+              <input 
+                name="title" 
+                defaultValue={e.title} 
+                required 
+                className="c-input" 
+              />
             </label>
-
             <label className="c-field">
               <div className="c-label">Location (optional)</div>
-              <input name="location" defaultValue={e.location || ""} className="c-input" />
+              <input 
+                name="location" 
+                defaultValue={e.location || ""} 
+                className="c-input" 
+              />
             </label>
           </div>
-        </div>
+        </section>
 
-        <div className="c-section" style={{ gap: "var(--space-3)" }}>
+        <section className="c-section">
           <div className="c-sectionTitle">Time</div>
-
           <div className="c-stack">
             <label className="c-field">
               <div className="c-label">Start (optional)</div>
@@ -71,7 +83,6 @@ export default async function ManageEdit({
                 className="c-input"
               />
             </label>
-
             <label className="c-field">
               <div className="c-label">End (optional)</div>
               <input
@@ -82,11 +93,10 @@ export default async function ManageEdit({
               />
             </label>
           </div>
-        </div>
+        </section>
 
-        <div className="c-section" style={{ gap: "var(--space-3)" }}>
+        <section className="c-section">
           <div className="c-sectionTitle">Details</div>
-
           <label className="c-field">
             <div className="c-label">Details (optional)</div>
             <textarea
@@ -96,29 +106,24 @@ export default async function ManageEdit({
               className="c-textarea"
             />
           </label>
-        </div>
+        </section>
 
-        <div className="c-section" style={{ gap: "var(--space-3)" }}>
+        <section className="c-section">
           <div className="c-sectionTitle">Media</div>
-
-          <div className="c-stack" style={{ gap: "var(--space-3)" }}>
+          <div className="c-stack">
             <div className="c-field">
               <div className="c-label">Cover image (optional)</div>
-              <div className="c-help">Shown at the top of your event.</div>
               <CoverUpload name="cover_image_url" initialUrl={e.cover_image_url || ""} />
             </div>
-
             <div className="c-field">
               <div className="c-label">Vibe</div>
-              <div className="c-help">Affects the GIF and page colors.</div>
               <GifPicker name="gif_key" initialKey={e.gif_key || "confetti"} />
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="c-section" style={{ gap: "var(--space-3)" }}>
+        <section className="c-section">
           <div className="c-sectionTitle">Sharing</div>
-
           <label className="c-field">
             <div className="c-label">Link expiry (optional)</div>
             <input
@@ -128,14 +133,19 @@ export default async function ManageEdit({
               className="c-input"
             />
           </label>
-        </div>
+        </section>
 
-        <button className="c-btnPrimary">Save changes</button>
+        <button type="submit" className="c-btnPrimary">
+          Save changes
+        </button>
       </form>
     </Shell>
   );
 }
 
+/**
+ * Server Action to handle the event update
+ */
 async function saveAction(formData: FormData) {
   "use server";
   const supabase = createSupabaseServer();
@@ -161,7 +171,7 @@ async function saveAction(formData: FormData) {
   const expires_at = expiresAtLocal ? toUTCFromLocalAmsterdam(expiresAtLocal) : null;
 
   const { error } = await supabase.rpc("update_event_by_manage_token", {
-    p_manage_token: mt, // manage_handle in your current URLs
+    p_manage_token: mt,
     p_title: title,
     p_starts_at: starts_at,
     p_ends_at: ends_at,
@@ -177,6 +187,9 @@ async function saveAction(formData: FormData) {
   redirect(`/m/${mt}`);
 }
 
+/**
+ * Helper to convert ISO string to local Amsterdam input format
+ */
 function toAmsterdamLocalInputValue(iso: string) {
   return formatInTimeZone(new Date(iso), TZ, "yyyy-MM-dd'T'HH:mm");
 }

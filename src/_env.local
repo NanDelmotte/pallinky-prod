@@ -1,0 +1,15 @@
+SUPABASE_URL=https://ktcgtjcaxoqqrnfljnyu.supabase.co
+SUPABASE_ANON_KEY=sb_publishable_Gu0pXYRGLOrjrG7WOJ_ZeA_NUWmASfy
+
+
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
+RESEND_API_KEY=rre_Q1tB6D6A_B2Epdg4wSzRvs8Pc2P3NMH7m
+NEXT_PUBLIC_APP_URL=https://localhost:3000
+
+MAINTENANCE_MODE=false
+CRON_SECRET=cirklie-cron-secret-9f3k2m8x7q4w5e6r
+RESEND_FROM_EMAIL="onboarding@resend.dev"
+
+VAPID_PRIVATE_KEY=FGsrndipLjMxD79MOuybrFBfxK9G-lNFeODsJiemEcM
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=BPFmtF2zPcyW_WE6yhoaUte8Cp17ucLcQwoRuoOvdS9XXQLr-uzQuaxnmIXPrcbH5Pj6GY8_I9GMusJMCzbyVFo

@@ -1,4 +1,9 @@
-// src/app/create/details/gif-picker.tsx
+/**
+ * Path: src/app/create/details/gif-picker.tsx
+ * Description: Vibe selection component. Relies on global .c-choice 
+ * and .c-choice--active classes for styling via globals.css.
+ */
+
 "use client";
 
 import { useState } from "react";
@@ -10,6 +15,7 @@ const OPTIONS: Option[] = [
   { key: "fiesta", label: "Fiesta", emoji: "💃" },
   { key: "zen", label: "Zen", emoji: "🫶" },
   { key: "classy", label: "Classy", emoji: "🎉" },
+  { key: "spicy", label: "Spicy", emoji: "🌶️" },
 ];
 
 export default function GifPicker({
@@ -23,10 +29,12 @@ export default function GifPicker({
     initialKey && OPTIONS.some((o) => o.key === initialKey)
       ? initialKey
       : "girly";
+    
   const [value, setValue] = useState(initial);
 
   function choose(next: string) {
     setValue(next);
+    // Dispatches event to update the global theme/palette class on <html>
     window.dispatchEvent(
       new CustomEvent("cirklie:vibe", { detail: { gifKey: next } })
     );
@@ -50,7 +58,9 @@ export default function GifPicker({
                 <div style={{ fontSize: 20, width: 26, textAlign: "center" }}>
                   {o.emoji}
                 </div>
-                <div style={{ fontWeight: 650, fontSize: 14 }}>{o.label}</div>
+                <div style={{ fontWeight: 650, fontSize: 14 }}>
+                  {o.label}
+                </div>
               </div>
             </button>
           );

@@ -1,6 +1,6 @@
-// src/app/m/[token]/guests/page.tsx
-
-
+/**
+ * Path: src/app/m/[token]/guests/page.tsx
+ */
 
 import Shell from "@/components/Shell";
 import { createSupabaseServer } from "@/lib/supabase/server";
@@ -14,18 +14,6 @@ type Row = {
   responded_at: string;
   message?: string | null;
 };
-
-function splitByStatus(rows: Row[]) {
-  const yes: Row[] = [];
-  const maybe: Row[] = [];
-  const no: Row[] = [];
-  for (const r of rows) {
-    if (r.status === "yes") yes.push(r);
-    else if (r.status === "maybe") maybe.push(r);
-    else no.push(r);
-  }
-  return { yes, maybe, no };
-}
 
 export default async function ManageGuestsAndMessage({
   params,
@@ -43,7 +31,7 @@ export default async function ManageGuestsAndMessage({
     return (
       <Shell title="Invalid link" subtitle="This manage link doesn’t match an event.">
         <div className="c-stack">
-          <div className="c-help">Open the manage URL you saved when you created the event.</div>
+          <div className="c-help">Link not found.</div>
         </div>
       </Shell>
     );
@@ -51,7 +39,10 @@ export default async function ManageGuestsAndMessage({
 
   const { data: list } = await supabase.rpc("get_guest_list", { p_slug: e.slug });
   const rows = (list || []) as Row[];
-  const grouped = splitByStatus(rows);
+  
+  const yes = rows.filter(r => r.status === "yes");
+  const maybe = rows.filter(r => r.status === "maybe");
+  const no = rows.filter(r => r.status === "no");
 
   const paletteKey = paletteForGif(e.gif_key ?? null);
 
@@ -62,35 +53,22 @@ export default async function ManageGuestsAndMessage({
       backHref={`/m/${params.token}`}
       paletteKey={paletteKey}
     >
-      <div className="c-stack">
-        {/* RSVP Summary */}
-        <section className="c-section">
-          <div className="c-sectionTitle">RSVPs</div>
-
-          <div className="c-actions c-actions--2col">
-            <Stat label="Going" value={grouped.yes.length} />
-            <Stat label="Maybe" value={grouped.maybe.length} />
-            <Stat label="No" value={grouped.no.length} />
-            <Stat label="Total" value={rows.length} />
-          </div>
-        </section>
-
-        {/* RSVP Lists */}
-        <section className="c-section">
-          <Group title="Going" rows={grouped.yes} />
-          <Group title="Maybe" rows={grouped.maybe} />
-          <Group title="No" rows={grouped.no} />
-        </section>
+      <div className="c-stack" style={{ gap: "var(--space-5)" }}>
+        
+        {/* Unified Guest List */}
+        <div className="c-stack">
+          <Group title="Going" count={yes.length} rows={yes} />
+          <Group title="Maybe" count={maybe.length} rows={maybe} />
+          <Group title="No" count={no.length} rows={no} />
+        </div>
 
         <div className="c-divider" />
 
         {/* Message guests */}
         <section className="c-section">
-          <div className="c-sectionTitle">Message guests</div>
-
+          <div className="c-sectionTitle">Message outbox</div>
           <form action={sendAction} className="c-stack">
             <input type="hidden" name="mt" value={params.token} />
-
             <div className="c-field">
               <div className="c-label">Subject (optional)</div>
               <input
@@ -99,13 +77,10 @@ export default async function ManageGuestsAndMessage({
                 className="c-input"
               />
             </div>
-
             <div className="c-field">
               <div className="c-label">Message</div>
-              <textarea name="body" required rows={6} className="c-textarea" />
-              <div className="c-help">Sends to guests who added email (outbox only).</div>
+              <textarea name="body" required rows={4} className="c-textarea" />
             </div>
-
             <button className="c-btnPrimary" type="submit">
               Send message
             </button>
@@ -116,71 +91,50 @@ export default async function ManageGuestsAndMessage({
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Group({ title, count, rows }: { title: string; count: number; rows: Row[] }) {
   return (
-    <div
-      style={{
-        border: "1px solid var(--border)",
-        borderRadius: "var(--radius-md)",
-        padding: 12,
-        background: "var(--surface-strong)",
-        display: "grid",
-        gap: 4,
-      }}
-    >
-      <div className="c-help">{label}</div>
-      <div style={{ fontWeight: 700, fontSize: 18, lineHeight: 1 }}>{value}</div>
-    </div>
-  );
-}
-
-function Group({ title, rows }: { title: string; rows: Row[] }) {
-  return (
-    <section
-      style={{
-        border: "1px solid var(--border)",
-        borderRadius: "var(--radius-lg)",
-        padding: "var(--space-3)",
-        background: "var(--surface)",
-      }}
-    >
-      <div style={{ fontWeight: 700, marginBottom: "var(--space-2)" }}>
-        {title} ({rows.length})
+    <section className="c-section">
+      <div className="c-sectionTitle" style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <span>{title}</span>
+        <span>{count}</span>
       </div>
 
-      {rows.length ? (
-        <div className="c-stack" style={{ gap: "var(--space-2)" }}>
-          {rows.map((r, i) => (
+      <div className="c-stack" style={{ gap: "var(--space-1)" }}>
+        {rows.length > 0 ? (
+          rows.map((r, i) => (
             <div
               key={`${r.name}-${i}`}
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                gap: 12,
-                padding: 10,
+                alignItems: "center",
+                padding: "14px",
                 borderRadius: "var(--radius-md)",
-                border: "1px solid var(--border)",
                 background: "var(--surface-strong)",
+                border: "1px solid var(--border)",
               }}
             >
-              <div style={{ display: "grid", gap: 4 }}>
-                <div style={{ fontWeight: 650 }}>{r.name}</div>
-                {r.message ? (
-                  <div className="c-help" style={{ fontStyle: "italic" }}>
+              <div style={{ display: "grid", gap: "2px" }}>
+                <span style={{ fontWeight: 650, fontSize: "15px", color: "var(--text)" }}>
+                  {r.name}
+                </span>
+                {r.message && (
+                  <span style={{ fontSize: "13px", opacity: 0.7, fontStyle: "italic", color: "var(--text)" }}>
                     “{r.message}”
-                  </div>
-                ) : null}
+                  </span>
+                )}
               </div>
-
-              <div className="c-help" style={{ whiteSpace: "nowrap" }}>
+              <span style={{ fontSize: "12px", opacity: 0.5, color: "var(--text)", whiteSpace: "nowrap" }}>
                 {formatEU(r.responded_at)}
-              </div>
+              </span>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="c-help">—</div>
-      )}
+          ))
+        ) : (
+          <div style={{ padding: "14px", opacity: 0.4, fontSize: "14px", color: "var(--text)" }}>
+            No one here yet
+          </div>
+        )}
+      </div>
     </section>
   );
 }
@@ -188,7 +142,6 @@ function Group({ title, rows }: { title: string; rows: Row[] }) {
 async function sendAction(formData: FormData) {
   "use server";
   const supabase = createSupabaseServer();
-
   const mt = String(formData.get("mt") || "");
   const subject = String(formData.get("subject") || "").trim() || null;
   const body = String(formData.get("body") || "").trim();
@@ -199,6 +152,5 @@ async function sendAction(formData: FormData) {
     p_body: body,
   });
 
-  // feedback via dashboard query param
   redirect(`/m/${mt}?sent=1`);
 }
